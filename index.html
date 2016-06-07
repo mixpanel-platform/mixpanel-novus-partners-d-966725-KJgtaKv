@@ -1,15 +1,54 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
-    <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
-  </head>
-  <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
-    <script>
-      // Run queries and display results here
-    </script>
-  </body>
+	<head>
+		<meta charset="utf-8">
+		<link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
+		<link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
+		<script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
+	</head>
+  	<body class="mixpanel-platform-body">
+		<h1>Hello, World!</h1>
+		<div id="chartDiv"></div>
+		<script>
+			MP.api.setCredentials('9c7ae00a90695deab3cb8874cb25bd3e')
+
+			var storeOfRunningTotals = {}
+			var graphData = {}
+			var debugI = 0
+			//structure needs to be: 
+			// data = {'company1': {date1: x, date2: x+y}}
+
+
+			MP.api.jql(
+				function main() {
+					return People()
+					.groupBy([
+					"properties.Company / Org",
+					function(user) {return new Date(user.properties.$created).toISOString().split("T")[0].slice(0,8)+'01'},
+    				], mixpanel.reducer.count());
+					})
+			.done(function(results) {
+				for (var obj in results) {
+					debugI += 1
+					var segmentedKey = results[obj]['key'][0]
+					var dateKey = results[obj]['key'][1]
+					var count = results[obj]['value']
+
+					//create segmented keys if they don't exist
+					if (! storeOfRunningTotals.hasOwnProperty(segmentedKey)) {
+						storeOfRunningTotals[segmentedKey] = 0
+					}
+					if (! graphData.hasOwnProperty(segmentedKey)) {
+						graphData[segmentedKey] = {}
+					}
+
+					graphData[segmentedKey][dateKey] = (count + storeOfRunningTotals[segmentedKey])//for this date, graph the current count + the current running total
+					storeOfRunningTotals[segmentedKey] += count // add to the running total count
+				}
+				console.log(graphData);
+				console.log(storeOfRunningTotals);
+				$('#chartDiv').MPChart({chartType: 'line', data: graphData})
+			});
+		</script>
+	</body>
 </html>
